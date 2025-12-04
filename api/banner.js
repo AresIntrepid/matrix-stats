@@ -66,18 +66,19 @@ export default async function handler(req, res) {
       
       // Text
       svg += `<text x="30" y="40" fill="#00ff41" opacity="0.5" font-family="Courier New" font-size="18">Wake up, Neo...</text>`;
-      svg += `<text x="600" y="220" text-anchor="middle" fill="#00ff41" font-family="Courier New" font-size="100" font-weight="900" filter="drop-shadow(0 0 10px rgba(0,255,65,0.8))">${username}</text>`;
+      svg += `<text x="600" y="220" text-anchor="middle" fill="#00ff41" font-family="Courier New" font-size="100" font-weight="900" style="filter: drop-shadow(0 0 10px rgba(0,255,65,0.8));">${username}</text>`;
       svg += `<text x="600" y="260" text-anchor="middle" fill="#00ff41" opacity="0.7" font-family="Courier New" font-size="24">SYSTEM ACCESS GRANTED</text>`;
       
       svg += '</svg>';
       
-      // Convert SVG to buffer
-      const buffer = await sharp(Buffer.from(svg))
-        .png()
+      // Convert SVG to RGBA buffer with proper dimensions
+      const { data, info } = await sharp(Buffer.from(svg))
+        .resize(width, height)
+        .ensureAlpha()
         .raw()
         .toBuffer({ resolveWithObject: true });
       
-      encoder.addFrame(buffer.data);
+      encoder.addFrame(data);
     }
     
     encoder.finish();
