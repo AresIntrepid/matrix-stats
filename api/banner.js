@@ -1,5 +1,5 @@
-const Jimp = require('jimp').default || require('jimp');
-const { GifFrame, GifCodec } = require('gifwrap');
+import Jimp from 'jimp';
+import { GifFrame, GifCodec } from 'gifwrap';
 
 export default async function handler(req, res) {
   try {
@@ -20,7 +20,8 @@ export default async function handler(req, res) {
     const gifFrames = [];
     
     for (let frame = 0; frame < frames; frame++) {
-      const image = await new Jimp(width, height, 0x000000ff);
+      // Create image using Jimp's create method
+      const image = await Jimp.create(width, height, 0x000000ff);
       
       // Draw grid lines
       for (let i = 0; i < 24; i++) {
@@ -30,7 +31,7 @@ export default async function handler(req, res) {
         }
       }
       
-      // Draw falling matrix characters (as simple dots)
+      // Draw falling matrix characters
       for (let i = 0; i < drops.length; i++) {
         const x = i * fontSize;
         const y = drops[i] * fontSize;
