@@ -1,12 +1,23 @@
-import Jimp from 'jimp';
-import { GifFrame, GifCodec } from 'gifwrap';
+const sharp = require('sharp');
+const GIFEncoder = require('gif-encoder-2');
 
 export default async function handler(req, res) {
   try {
     const username = 'AresIntrepid';
     const width = 1200;
     const height = 400;
-    const frames = 20;
+    const frames = 25;
+    
+    const encoder = new GIFEncoder(width, height);
+    
+    res.setHeader('Content-Type', 'image/gif');
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
+    
+    encoder.createReadStream().pipe(res);
+    encoder.start();
+    encoder.setRepeat(0);
+    encoder.setDelay(100);
+    encoder.setQuality(10);
     
     const matrix = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^*()';
     const fontSize = 14;
@@ -17,35 +28,28 @@ export default async function handler(req, res) {
       drops[i] = Math.floor(Math.random() * -30);
     }
     
-    const gifFrames = [];
-    
     for (let frame = 0; frame < frames; frame++) {
-      // Create image using Jimp's create method
-      const image = await Jimp.create(width, height, 0x000000ff);
+      // Create SVG for each frame
+      let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+        <rect width="${width}" height="${height}" fill="#000000"/>`;
       
-      // Draw grid lines
+      // Grid lines
       for (let i = 0; i < 24; i++) {
-        const x = i * 50;
-        for (let y = 0; y < height; y += 2) {
-          image.setPixelColor(0x00ff410d, x, y);
-        }
+        svg += `<line x1="${i * 50}" y1="0" x2="${i * 50}" y2="${height}" stroke="rgba(0,255,65,0.05)" stroke-width="1"/>`;
+      }
+      for (let i = 0; i < 8; i++) {
+        svg += `<line x1="0" y1="${i * 50}" x2="${width}" y2="${i * 50}" stroke="rgba(0,255,65,0.05)" stroke-width="1"/>`;
       }
       
-      // Draw falling matrix characters
+      // Matrix characters
       for (let i = 0; i < drops.length; i++) {
+        const char = matrix[Math.floor(Math.random() * matrix.length)];
         const x = i * fontSize;
         const y = drops[i] * fontSize;
         
-        if (y > 0 && y < height - 10) {
-          for (let py = 0; py < 10; py++) {
-            for (let px = 0; px < 8; px++) {
-              if (x + px < width && y + py < height) {
-                const opacity = Math.floor(Math.max(50, 255 - (py * 20)));
-                const color = (0x00ff4100 | opacity);
-                image.setPixelColor(color, x + px, y + py);
-              }
-            }
-          }
+        if (y > 0 && y < height) {
+          const opacity = Math.max(0.2, 1 - (Math.abs(drops[i]) * 0.02));
+          svg += `<text x="${x}" y="${y}" fill="#00ff41" opacity="${opacity}" font-family="Courier New" font-size="14">${char}</text>`;
         }
         
         if (y > height && Math.random() > 0.95) {
@@ -54,49 +58,29 @@ export default async function handler(req, res) {
         drops[i]++;
       }
       
-      // Draw corner brackets
-      for (let i = 0; i < 40; i++) {
-        image.setPixelColor(0x00ff4199, 20, 20 + i);
-        image.setPixelColor(0x00ff4199, 20 + i, 20);
-        image.setPixelColor(0x00ff4199, 1180, 20 + i);
-        image.setPixelColor(0x00ff4199, 1180 - i, 20);
-        image.setPixelColor(0x00ff4199, 20, 380 - i);
-        image.setPixelColor(0x00ff4199, 20 + i, 380);
-        image.setPixelColor(0x00ff4199, 1180, 380 - i);
-        image.setPixelColor(0x00ff4199, 1180 - i, 380);
-      }
+      // Corner brackets
+      svg += `<path d="M 20 20 L 20 60 M 20 20 L 60 20" stroke="#00ff41" stroke-width="2" fill="none" opacity="0.6"/>`;
+      svg += `<path d="M 1180 20 L 1180 60 M 1180 20 L 1140 20" stroke="#00ff41" stroke-width="2" fill="none" opacity="0.6"/>`;
+      svg += `<path d="M 20 380 L 20 340 M 20 380 L 60 380" stroke="#00ff41" stroke-width="2" fill="none" opacity="0.6"/>`;
+      svg += `<path d="M 1180 380 L 1180 340 M 1180 380 L 1140 380" stroke="#00ff41" stroke-width="2" fill="none" opacity="0.6"/>`;
       
-      // Add text
-      const font = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
-      const smallFont = await Jimp.loadFont(Jimp.FONT_SANS_16_WHITE);
+      // Text
+      svg += `<text x="30" y="40" fill="#00ff41" opacity="0.5" font-family="Courier New" font-size="18">Wake up, Neo...</text>`;
+      svg += `<text x="600" y="220" text-anchor="middle" fill="#00ff41" font-family="Courier New" font-size="100" font-weight="900" filter="drop-shadow(0 0 10px rgba(0,255,65,0.8))">${username}</text>`;
+      svg += `<text x="600" y="260" text-anchor="middle" fill="#00ff41" opacity="0.7" font-family="Courier New" font-size="24">SYSTEM ACCESS GRANTED</text>`;
       
-      image.print(smallFont, 30, 25, 'Wake up, Neo...');
-      image.print(font, 0, 150, {
-        text: username,
-        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER
-      }, width);
-      image.print(smallFont, 0, 240, {
-        text: 'SYSTEM ACCESS GRANTED',
-        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER
-      }, width);
+      svg += '</svg>';
       
-      // Make text green
-      image.color([
-        { apply: 'red', params: [-255] },
-        { apply: 'green', params: [0] },
-        { apply: 'blue', params: [-190] }
-      ]);
+      // Convert SVG to buffer
+      const buffer = await sharp(Buffer.from(svg))
+        .png()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
       
-      const gifFrame = new GifFrame(image.bitmap);
-      gifFrames.push(gifFrame);
+      encoder.addFrame(buffer.data);
     }
     
-    const codec = new GifCodec();
-    const gif = await codec.encodeGif(gifFrames, { loops: 0 });
-    
-    res.setHeader('Content-Type', 'image/gif');
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
-    res.status(200).send(gif.buffer);
+    encoder.finish();
     
   } catch (error) {
     console.error('Error generating GIF:', error);
