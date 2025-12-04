@@ -1,90 +1,108 @@
-const sharp = require('sharp');
-const GIFEncoder = require('gif-encoder-2');
-
-export default async function handler(req, res) {
-  try {
-    const username = 'AresIntrepid';
-    const width = 1200;
-    const height = 400;
-    const frames = 25;
+export default function handler(req, res) {
+  const username = 'AresIntrepid';
+  
+  // Generate random Matrix characters
+  const matrix = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^*()';
+  let matrixChars = '';
+  
+  // Create columns of characters at different heights (changes each request)
+  for (let col = 0; col < 60; col++) {
+    const x = col * 20;
+    const numChars = Math.floor(Math.random() * 20) + 10;
     
-    const encoder = new GIFEncoder(width, height);
-    
-    res.setHeader('Content-Type', 'image/gif');
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
-    
-    encoder.createReadStream().pipe(res);
-    encoder.start();
-    encoder.setRepeat(0);
-    encoder.setDelay(100);
-    encoder.setQuality(10);
-    
-    const matrix = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^*()';
-    const fontSize = 14;
-    const columns = Math.floor(width / fontSize);
-    const drops = [];
-    
-    for (let i = 0; i < columns; i++) {
-      drops[i] = Math.floor(Math.random() * -30);
+    for (let i = 0; i < numChars; i++) {
+      const y = (i * 20) + (Math.random() * 10);
+      const char = matrix[Math.floor(Math.random() * matrix.length)];
+      const opacity = (0.8 - (i * 0.04)).toFixed(2);
+      
+      if (opacity > 0) {
+        matrixChars += `<text x="${x}" y="${y}" fill="#00ff41" opacity="${opacity}" font-family="Courier New" font-size="14">${char}</text>`;
+      }
     }
-    
-    for (let frame = 0; frame < frames; frame++) {
-      // Create SVG for each frame
-      let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-        <rect width="${width}" height="${height}" fill="#000000"/>`;
-      
-      // Grid lines
-      for (let i = 0; i < 24; i++) {
-        svg += `<line x1="${i * 50}" y1="0" x2="${i * 50}" y2="${height}" stroke="rgba(0,255,65,0.05)" stroke-width="1"/>`;
-      }
-      for (let i = 0; i < 8; i++) {
-        svg += `<line x1="0" y1="${i * 50}" x2="${width}" y2="${i * 50}" stroke="rgba(0,255,65,0.05)" stroke-width="1"/>`;
-      }
-      
-      // Matrix characters
-      for (let i = 0; i < drops.length; i++) {
-        const char = matrix[Math.floor(Math.random() * matrix.length)];
-        const x = i * fontSize;
-        const y = drops[i] * fontSize;
-        
-        if (y > 0 && y < height) {
-          const opacity = Math.max(0.2, 1 - (Math.abs(drops[i]) * 0.02));
-          svg += `<text x="${x}" y="${y}" fill="#00ff41" opacity="${opacity}" font-family="Courier New" font-size="14">${char}</text>`;
-        }
-        
-        if (y > height && Math.random() > 0.95) {
-          drops[i] = 0;
-        }
-        drops[i]++;
-      }
-      
-      // Corner brackets
-      svg += `<path d="M 20 20 L 20 60 M 20 20 L 60 20" stroke="#00ff41" stroke-width="2" fill="none" opacity="0.6"/>`;
-      svg += `<path d="M 1180 20 L 1180 60 M 1180 20 L 1140 20" stroke="#00ff41" stroke-width="2" fill="none" opacity="0.6"/>`;
-      svg += `<path d="M 20 380 L 20 340 M 20 380 L 60 380" stroke="#00ff41" stroke-width="2" fill="none" opacity="0.6"/>`;
-      svg += `<path d="M 1180 380 L 1180 340 M 1180 380 L 1140 380" stroke="#00ff41" stroke-width="2" fill="none" opacity="0.6"/>`;
-      
-      // Text
-      svg += `<text x="30" y="40" fill="#00ff41" opacity="0.5" font-family="Courier New" font-size="18">Wake up, Neo...</text>`;
-      svg += `<text x="600" y="220" text-anchor="middle" fill="#00ff41" font-family="Courier New" font-size="100" font-weight="900" style="filter: drop-shadow(0 0 10px rgba(0,255,65,0.8));">${username}</text>`;
-      svg += `<text x="600" y="260" text-anchor="middle" fill="#00ff41" opacity="0.7" font-family="Courier New" font-size="24">SYSTEM ACCESS GRANTED</text>`;
-      
-      svg += '</svg>';
-      
-      // Convert SVG to RGBA buffer with proper dimensions
-      const { data, info } = await sharp(Buffer.from(svg))
-        .resize(width, height)
-        .ensureAlpha()
-        .raw()
-        .toBuffer({ resolveWithObject: true });
-      
-      encoder.addFrame(data);
-    }
-    
-    encoder.finish();
-    
-  } catch (error) {
-    console.error('Error generating GIF:', error);
-    res.status(500).json({ error: error.message, stack: error.stack });
   }
+
+  const svg = `<svg width="1200" height="400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .username {
+        font-family: 'Courier New', monospace;
+        font-size: 100px;
+        font-weight: 900;
+        fill: #00ff41;
+        filter: drop-shadow(0 0 10px rgba(0, 255, 65, 0.8)) 
+                drop-shadow(0 0 20px rgba(0, 255, 65, 0.6))
+                drop-shadow(0 0 30px rgba(0, 255, 65, 0.4));
+      }
+      
+      .subtitle {
+        font-family: 'Courier New', monospace;
+        font-size: 24px;
+        fill: #00ff41;
+        opacity: 0.7;
+      }
+      
+      .wake-up {
+        font-family: 'Courier New', monospace;
+        font-size: 18px;
+        fill: #00ff41;
+        opacity: 0.5;
+      }
+      
+      .bracket {
+        fill: none;
+        stroke: #00ff41;
+        stroke-width: 2;
+        opacity: 0.6;
+      }
+      
+      .grid-line {
+        stroke: rgba(0, 255, 65, 0.05);
+        stroke-width: 1;
+      }
+    </style>
+    
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect width="1200" height="400" fill="#000000"/>
+  
+  ${Array.from({ length: 24 }, (_, i) => 
+    `<line x1="${i * 50}" y1="0" x2="${i * 50}" y2="400" class="grid-line"/>`
+  ).join('')}
+  ${Array.from({ length: 8 }, (_, i) => 
+    `<line x1="0" y1="${i * 50}" x2="1200" y2="${i * 50}" class="grid-line"/>`
+  ).join('')}
+  
+  <g opacity="0.4">
+    ${matrixChars}
+  </g>
+  
+  <path d="M 20 20 L 20 60 M 20 20 L 60 20" class="bracket"/>
+  <path d="M 1180 20 L 1180 60 M 1180 20 L 1140 20" class="bracket"/>
+  <path d="M 20 380 L 20 340 M 20 380 L 60 380" class="bracket"/>
+  <path d="M 1180 380 L 1180 340 M 1180 380 L 1140 380" class="bracket"/>
+  
+  <text x="30" y="40" class="wake-up">Wake up, Neo...</text>
+  
+  <g>
+    <text x="600" y="220" text-anchor="middle" class="username" filter="url(#glow)">
+      ${username}
+    </text>
+    
+    <text x="600" y="260" text-anchor="middle" class="subtitle">
+      SYSTEM ACCESS GRANTED
+    </text>
+  </g>
+</svg>`;
+
+  res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.status(200).send(svg);
 }
