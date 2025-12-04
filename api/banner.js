@@ -23,8 +23,6 @@ export default function handler(req, res) {
     <svg width="1200" height="400" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&amp;family=VT323&amp;display=swap');
-          
           .username {
             font-family: 'Orbitron', monospace;
             font-size: 100px;
@@ -77,10 +75,8 @@ export default function handler(req, res) {
         </filter>
       </defs>
       
-      <!-- Background -->
       <rect width="1200" height="400" fill="#000000"/>
       
-      <!-- Grid overlay -->
       ${Array.from({ length: 24 }, (_, i) => 
         `<line x1="${i * 50}" y1="0" x2="${i * 50}" y2="400" class="grid-line"/>`
       ).join('')}
@@ -88,37 +84,26 @@ export default function handler(req, res) {
         `<line x1="0" y1="${i * 50}" x2="1200" y2="${i * 50}" class="grid-line"/>`
       ).join('')}
       
-      <!-- Matrix characters background -->
       <g opacity="0.3">
         ${matrixChars}
       </g>
       
-      <!-- Scanlines -->
       ${Array.from({ length: 100 }, (_, i) => 
         `<line x1="0" y1="${i * 4}" x2="1200" y2="${i * 4}" class="scanline"/>`
       ).join('')}
       
-      <!-- Corner brackets -->
-      <!-- Top left -->
       <path d="M 20 20 L 20 60 M 20 20 L 60 20" class="bracket"/>
-      <!-- Top right -->
       <path d="M 1180 20 L 1180 60 M 1180 20 L 1140 20" class="bracket"/>
-      <!-- Bottom left -->
       <path d="M 20 380 L 20 340 M 20 380 L 60 380" class="bracket"/>
-      <!-- Bottom right -->
       <path d="M 1180 380 L 1180 340 M 1180 380 L 1140 380" class="bracket"/>
       
-      <!-- Wake up Neo text -->
       <text x="30" y="40" class="wake-up">Wake up, Neo...</text>
       
-      <!-- Main content -->
       <g>
-        <!-- Username -->
         <text x="600" y="220" text-anchor="middle" class="username" filter="url(#glow)">
           ${username}
         </text>
         
-        <!-- Subtitle -->
         <text x="600" y="260" text-anchor="middle" class="subtitle">
           &gt; SYSTEM ACCESS GRANTED_
         </text>
