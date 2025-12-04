@@ -1,7 +1,7 @@
 export default function handler(req, res) {
   const username = 'AresIntrepid';
   
-  // Generate random Matrix characters for the background (removed & to avoid XML issues)
+  // Generate random Matrix characters for the background
   const matrix = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^*()';
   let matrixChars = '';
   
@@ -109,7 +109,9 @@ export default function handler(req, res) {
   </g>
 </svg>`;
 
-  res.setHeader('Content-Type', 'image/svg+xml');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
+  // Set proper headers for GitHub
+  res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+  res.setHeader('Cache-Control', 's-maxage=1, stale-while-revalidate');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).send(svg);
 }
