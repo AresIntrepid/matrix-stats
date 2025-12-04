@@ -1,145 +1,109 @@
 const Jimp = require('jimp');
-const GifEncoder = require('gif-encoder-2');
+const { GifFrame, GifUtil, GifCodec } = require('gifwrap');
 
 export default async function handler(req, res) {
-  const username = 'AresIntrepid';
-  const width = 1200;
-  const height = 400;
-  const frames = 30;
-  
-  const encoder = new GifEncoder(width, height);
-  
-  res.setHeader('Content-Type', 'image/gif');
-  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  
-  encoder.createReadStream().pipe(res);
-  encoder.start();
-  encoder.setRepeat(0);
-  encoder.setDelay(100);
-  encoder.setQuality(10);
-  
-  const matrix = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^*()';
-  const fontSize = 14;
-  const columns = Math.floor(width / fontSize);
-  const drops = [];
-  
-  for (let i = 0; i < columns; i++) {
-    drops[i] = Math.floor(Math.random() * -50);
-  }
-  
-  const greenColor = Jimp.rgbaToInt(0, 255, 65, 255);
-  const blackColor = Jimp.rgbaToInt(0, 0, 0, 255);
-  const gridColor = Jimp.rgbaToInt(0, 255, 65, 13);
-  const bracketColor = Jimp.rgbaToInt(0, 255, 65, 153);
-  
-  for (let frame = 0; frame < frames; frame++) {
-    const image = new Jimp(width, height, blackColor);
+  try {
+    const username = 'AresIntrepid';
+    const width = 1200;
+    const height = 400;
+    const frames = 20;
     
-    // Draw grid
-    for (let i = 0; i < 24; i++) {
-      const x = i * 50;
-      for (let y = 0; y < height; y++) {
-        image.setPixelColor(gridColor, x, y);
-      }
-    }
-    for (let i = 0; i < 8; i++) {
-      const y = i * 50;
-      for (let x = 0; x < width; x++) {
-        image.setPixelColor(gridColor, x, y);
-      }
+    const matrix = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^*()';
+    const fontSize = 14;
+    const columns = Math.floor(width / fontSize);
+    const drops = [];
+    
+    for (let i = 0; i < columns; i++) {
+      drops[i] = Math.floor(Math.random() * -30);
     }
     
-    // Draw falling matrix characters
-    for (let i = 0; i < drops.length; i++) {
-      const char = matrix[Math.floor(Math.random() * matrix.length)];
-      const x = i * fontSize;
-      const y = drops[i] * fontSize;
+    const gifFrames = [];
+    
+    for (let frame = 0; frame < frames; frame++) {
+      const image = new Jimp(width, height, 0x000000ff);
       
-      if (y > 0 && y < height) {
-        // Draw character (simplified as rectangles since we don't have font rendering)
-        for (let py = 0; py < 12; py++) {
-          for (let px = 0; px < 8; px++) {
-            if (x + px < width && y + py < height) {
-              const opacity = Math.max(0, 255 - (Math.abs(drops[i]) * 5));
-              const color = Jimp.rgbaToInt(0, 255, 65, opacity);
-              image.setPixelColor(color, x + px, y + py);
+      // Draw grid lines
+      for (let i = 0; i < 24; i++) {
+        const x = i * 50;
+        for (let y = 0; y < height; y += 2) {
+          image.setPixelColor(0x00ff410d, x, y);
+        }
+      }
+      
+      // Draw falling matrix characters (as simple dots)
+      for (let i = 0; i < drops.length; i++) {
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+        
+        if (y > 0 && y < height - 10) {
+          // Draw a simple rectangle to represent character
+          for (let py = 0; py < 10; py++) {
+            for (let px = 0; px < 8; px++) {
+              if (x + px < width && y + py < height) {
+                const opacity = Math.floor(Math.max(50, 255 - (py * 20)));
+                const color = (0x00ff4100 | opacity);
+                image.setPixelColor(color, x + px, y + py);
+              }
             }
           }
         }
+        
+        if (y > height && Math.random() > 0.95) {
+          drops[i] = 0;
+        }
+        drops[i]++;
       }
       
-      if (y > height && Math.random() > 0.975) {
-        drops[i] = 0;
+      // Draw corner brackets
+      for (let i = 0; i < 40; i++) {
+        // Top left
+        image.setPixelColor(0x00ff4199, 20, 20 + i);
+        image.setPixelColor(0x00ff4199, 20 + i, 20);
+        // Top right
+        image.setPixelColor(0x00ff4199, 1180, 20 + i);
+        image.setPixelColor(0x00ff4199, 1180 - i, 20);
+        // Bottom left
+        image.setPixelColor(0x00ff4199, 20, 380 - i);
+        image.setPixelColor(0x00ff4199, 20 + i, 380);
+        // Bottom right
+        image.setPixelColor(0x00ff4199, 1180, 380 - i);
+        image.setPixelColor(0x00ff4199, 1180 - i, 380);
       }
-      drops[i]++;
+      
+      // Add text
+      const font = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
+      const smallFont = await Jimp.loadFont(Jimp.FONT_SANS_16_WHITE);
+      
+      image.print(smallFont, 30, 25, 'Wake up, Neo...');
+      image.print(font, 0, 150, {
+        text: username,
+        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER
+      }, width);
+      image.print(smallFont, 0, 240, {
+        text: 'SYSTEM ACCESS GRANTED',
+        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER
+      }, width);
+      
+      // Make text green
+      image.color([
+        { apply: 'red', params: [-255] },
+        { apply: 'green', params: [0] },
+        { apply: 'blue', params: [-190] }
+      ]);
+      
+      const gifFrame = new GifFrame(image.bitmap);
+      gifFrames.push(gifFrame);
     }
     
-    // Draw corner brackets
-    const drawLine = (x1, y1, x2, y2) => {
-      const dx = Math.abs(x2 - x1);
-      const dy = Math.abs(y2 - y1);
-      const sx = x1 < x2 ? 1 : -1;
-      const sy = y1 < y2 ? 1 : -1;
-      let err = dx - dy;
-      
-      while (true) {
-        if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height) {
-          image.setPixelColor(bracketColor, x1, y1);
-        }
-        if (x1 === x2 && y1 === y2) break;
-        const e2 = 2 * err;
-        if (e2 > -dy) { err -= dy; x1 += sx; }
-        if (e2 < dx) { err += dx; y1 += sy; }
-      }
-    };
+    const codec = new GifCodec();
+    const gif = await codec.encodeGif(gifFrames, { loops: 0 });
     
-    // Top left
-    drawLine(20, 20, 20, 60);
-    drawLine(20, 20, 60, 20);
-    // Top right
-    drawLine(1180, 20, 1180, 60);
-    drawLine(1180, 20, 1140, 20);
-    // Bottom left
-    drawLine(20, 380, 20, 340);
-    drawLine(20, 380, 60, 380);
-    // Bottom right
-    drawLine(1180, 380, 1180, 340);
-    drawLine(1180, 380, 1140, 380);
+    res.setHeader('Content-Type', 'image/gif');
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
+    res.status(200).send(gif.buffer);
     
-    // Load font and add text
-    const font = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
-    const smallFont = await Jimp.loadFont(Jimp.FONT_SANS_16_WHITE);
-    
-    // Tint the fonts to green
-    image.print(smallFont, 30, 25, 'Wake up, Neo...');
-    image.print(font, 0, 160, {
-      text: username,
-      alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
-      alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
-    }, width, height);
-    image.print(smallFont, 0, 240, {
-      text: 'SYSTEM ACCESS GRANTED',
-      alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER
-    }, width);
-    
-    // Apply green color to text (color replacement)
-    image.scan(0, 0, width, height, function(x, y, idx) {
-      const red = this.bitmap.data[idx + 0];
-      const green = this.bitmap.data[idx + 1];
-      const blue = this.bitmap.data[idx + 2];
-      const alpha = this.bitmap.data[idx + 3];
-      
-      // If it's white text, make it green
-      if (red > 200 && green > 200 && blue > 200 && alpha > 200) {
-        this.bitmap.data[idx + 0] = 0;
-        this.bitmap.data[idx + 1] = 255;
-        this.bitmap.data[idx + 2] = 65;
-      }
-    });
-    
-    encoder.addFrame(image.bitmap.data);
+  } catch (error) {
+    console.error('Error generating GIF:', error);
+    res.status(500).json({ error: error.message });
   }
-  
-  encoder.finish();
 }
