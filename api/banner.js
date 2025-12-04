@@ -1,5 +1,5 @@
-const Jimp = require('jimp');
-const { GifFrame, GifUtil, GifCodec } = require('gifwrap');
+const Jimp = require('jimp').default || require('jimp');
+const { GifFrame, GifCodec } = require('gifwrap');
 
 export default async function handler(req, res) {
   try {
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     const gifFrames = [];
     
     for (let frame = 0; frame < frames; frame++) {
-      const image = new Jimp(width, height, 0x000000ff);
+      const image = await new Jimp(width, height, 0x000000ff);
       
       // Draw grid lines
       for (let i = 0; i < 24; i++) {
@@ -36,7 +36,6 @@ export default async function handler(req, res) {
         const y = drops[i] * fontSize;
         
         if (y > 0 && y < height - 10) {
-          // Draw a simple rectangle to represent character
           for (let py = 0; py < 10; py++) {
             for (let px = 0; px < 8; px++) {
               if (x + px < width && y + py < height) {
@@ -56,16 +55,12 @@ export default async function handler(req, res) {
       
       // Draw corner brackets
       for (let i = 0; i < 40; i++) {
-        // Top left
         image.setPixelColor(0x00ff4199, 20, 20 + i);
         image.setPixelColor(0x00ff4199, 20 + i, 20);
-        // Top right
         image.setPixelColor(0x00ff4199, 1180, 20 + i);
         image.setPixelColor(0x00ff4199, 1180 - i, 20);
-        // Bottom left
         image.setPixelColor(0x00ff4199, 20, 380 - i);
         image.setPixelColor(0x00ff4199, 20 + i, 380);
-        // Bottom right
         image.setPixelColor(0x00ff4199, 1180, 380 - i);
         image.setPixelColor(0x00ff4199, 1180 - i, 380);
       }
@@ -104,6 +99,6 @@ export default async function handler(req, res) {
     
   } catch (error) {
     console.error('Error generating GIF:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, stack: error.stack });
   }
 }
